@@ -6,7 +6,10 @@ import sys
 # Initialize the dictionary to store coordinates
 coordinates = {}
 img_id = 0
-images_folder = './notebooks/wildtrack_processed/images/'
+camera_id = 1
+images_folder = f'./notebooks/wildtrack_processed/images/{camera_id}/'
+output_folder = './notebooks/wildtrack_processed/annotations/'
+calibration_folder = './notebooks/wildtrack_processed/calibration/'
 
 
 def click_event(event, x, y, flags, params):
@@ -17,15 +20,23 @@ def click_event(event, x, y, flags, params):
         cv2.circle(img, (x, y), 5, (0, 255, 0), -1)
         cv2.imshow(f'image', img)
 
+def save_annotations(coordinates, output_folder, camera_id):
+    # Save coordinates to a json file
+    os.makedirs(output_folder, exist_ok=True)
+    with open(output_folder + f'annotations{camera_id}.json', 'w') as json_file:
+        json.dump(coordinates, json_file, indent=4)
+    print('Annotations saved under: ', output_folder + f'annotations{camera_id}.json')
+
 # Driver Code
 if __name__=="__main__":
     # Load all images in the 'images' directory
     images = os.listdir(images_folder)
     i = 0                          
     #eventually load existing annotations from a json file
-    if os.path.exists('annotations.json'):
-        with open('annotations.json', 'r') as json_file: 
+    if os.path.exists(output_folder + f'annotations{camera_id}.json'):
+        with open(output_folder + f'annotations{camera_id}.json', 'r') as json_file:
             coordinates = json.load(json_file)
+        
             
     while i < len(images):
         img_id = images[i]
@@ -38,7 +49,8 @@ if __name__=="__main__":
         for x, y in coordinates[img_id]:
             cv2.circle(img, (x, y), 5, (0, 255, 0), -1)
         # Display the image
-        cv2.putText(img, f'Image {img_id}/{len(images)}', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+        img_nb = int(img_id.split('.')[0])
+        cv2.putText(img, f'Image {img_nb}/{len(images)}', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
         cv2.imshow(f'image', img)
         # Set mouse callback function for window
         cv2.setMouseCallback(f'image', click_event)
@@ -48,9 +60,11 @@ if __name__=="__main__":
                 img = cv2.imread(f'{images_folder}{img_id}')
                 coordinates[img_id].clear()
                 cv2.imshow(f'image', img)
-            elif key == 32:  # Enter key
+            elif key == 32:  # Spacebar
                 i += 1 
                 break
+            elif key == ord('s'):
+                save_annotations(coordinates, output_folder, camera_id)
             elif key == ord('z'):  # undo
                 if i > 0:
                     i -= 1
@@ -61,6 +75,4 @@ if __name__=="__main__":
                 sys.exit()
         cv2.destroyAllWindows()
 
-    # Save coordinates to a json file
-    with open('annotations.json', 'w') as json_file:
-        json.dump(coordinates, json_file, indent=4)
+    save_annotations(coordinates, output_folder, camera_id)
